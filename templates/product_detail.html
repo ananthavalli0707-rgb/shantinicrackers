@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="product-detail-wrap">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{{ url_for('products') }}" class="text-decoration-none">Products</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="product-detail-card">
+        <div class="row g-0 align-items-stretch">
+            <div class="col-lg-6">
+                <div class="product-detail-gallery">
+                    <img src="{{ url_for('static', filename='uploads/offer logo.jpg') }}" class="offer-badge detail-offer-badge" alt="Offer label">
+                    <img src="{{ url_for('static', filename=product.image_url) }}" class="product-detail-image" alt="{{ product.name }}">
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="product-detail-body">
+                    <p class="section-kicker mb-2">Product Details</p>
+                    <h2 class="fw-bold mb-3">{{ product.name }}</h2>
+
+                    <div class="product-detail-meta">
+                        {% if product.category_name %}
+                        <span class="badge bg-warning text-dark">{{ product.category_name }}</span>
+                        {% endif %}
+                        {% if product.brand_name %}
+                        <span class="badge bg-light text-dark border">{{ product.brand_name }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {% if product.actual_price != product.discount_price %}
+                        <span class="text-decoration-line-through text-danger me-2 fs-5">₹{{ product.actual_price }}</span>
+                        {% endif %}
+                        <span class="product-detail-price">₹{{ product.discount_price }}</span>
+                    </div>
+
+                    <p class="product-detail-description mb-4">{{ product.description }}</p>
+
+                    <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="POST" class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center mb-3">
+                        <input type="hidden" name="return_to" value="{{ url_for('products') }}#product-{{ product.id }}">
+                        <div class="input-group" style="max-width: 170px;">
+                            <span class="input-group-text">Qty</span>
+                            <input type="number" name="quantity" value="1" min="1" class="form-control" aria-label="Quantity for {{ product.name }}">
+                        </div>
+                        <button type="submit" class="btn btn-danger fw-bold px-4">Add to Estimate</button>
+                    </form>
+
+                    <a href="{{ url_for('products') }}" class="btn btn-outline-danger">← Back to Catalog</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

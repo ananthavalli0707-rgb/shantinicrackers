@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center my-4">
+    <div class="col-md-6">
+        <div class="card shadow border-0 p-4 bg-white">
+            <h3 class="fw-bold text-dark mb-4 text-center">🛡️ Admin Panel: Add New Cracker</h3>
+            <form action="/admin/add-product" method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Product Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="e.g., 2" Deluxe Sparklers" required>
+                </div>
+                <div class="row">
+                    <div class="col mb-3">
+                        <label class="form-label fw-bold">Category</label>
+                        <select name="category_id" class="form-select" required>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col mb-3">
+                        <label class="form-label fw-bold">Brand</label>
+                        <select name="brand_id" class="form-select" required>
+                            {% for brand in brands %}
+                            <option value="{{ brand.id }}">{{ brand.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col mb-3">
+                        <label class="form-label fw-bold">Actual Price (MRP)</label>
+                        <input type="number" step="0.01" name="actual_price" class="form-control" placeholder="500" required>
+                    </div>
+                    <div class="col mb-3">
+                        <label class="form-label fw-bold">Our Discount Price</label>
+                        <input type="number" step="0.01" name="discount_price" class="form-control" placeholder="100" required>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Product Catalog Image</label>
+                    <input type="file" name="image" class="form-control" accept="image/*" required>
+                    <div class="form-text text-muted">Supports PNG, JPG, JPEG up to 5MB.</div>
+                </div>
+                <button type="submit" class="btn btn-dark w-100 fw-bold py-2">🚀 Upload and Publish Item</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

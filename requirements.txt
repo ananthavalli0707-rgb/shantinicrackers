@@ -1,0 +1,4 @@
+Flask==3.0.2
+python-dotenv==1.0.1
+pymysql==1.1.1
+Werkzeug==3.0.1

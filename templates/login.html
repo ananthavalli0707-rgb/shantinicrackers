@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-4">
+        <div class="card shadow p-4 border-0">
+            <p class="section-kicker text-center mb-1">Welcome back</p>
+            <h3 class="fw-bold text-center text-danger mb-4">Sign In</h3>
+            <form action="/login" method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Email or mobile number</label>
+                    <input type="text" name="identifier" class="form-control" autocomplete="username" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn btn-danger w-100 fw-bold">Sign In</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

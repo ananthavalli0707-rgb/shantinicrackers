@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <p class="section-kicker mb-1">Your account</p>
+        <h1 class="fw-bold mb-0">Client Dashboard</h1>
+    </div>
+    <a href="{{ url_for('products') }}" class="btn btn-danger fw-bold">Browse Products</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-bold text-uppercase">Customer</div>
+                <div class="display-6 fw-bold mt-3">{{ session.get('user_name', 'Customer') }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-bold text-uppercase">Phone</div>
+                <div class="display-6 fw-bold mt-3">{{ session.get('user_phone', 'Not available') }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-dark text-white">
+            <div class="card-body">
+                <div class="text-white-50 small fw-bold text-uppercase">Quick action</div>
+                <h5 class="fw-bold mt-3">Create a new estimate</h5>
+                <a href="{{ url_for('products') }}" class="btn btn-warning btn-sm fw-bold mt-2">Continue Shopping</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+        <h4 class="fw-bold mb-1">My estimate history</h4>
+        <p class="text-muted small mb-0">Your recent firecracker inquiries and totals.</p>
+    </div>
+    <div class="card-body px-4 pb-4">
+        {% if inquiries %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small text-uppercase">
+                        <th>Inquiry ID</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inquiry in inquiries %}
+                    <tr>
+                        <td class="fw-bold">#{{ inquiry.id }}</td>
+                        <td class="text-muted">{{ inquiry.items or 'No item details' }}</td>
+                        <td class="fw-bold text-success">₹{{ inquiry.total_amount }}</td>
+                        <td><span class="badge text-bg-warning">{{ inquiry.status }}</span></td>
+                        <td class="text-muted small">{{ inquiry.created_at.strftime('%d %b %Y, %I:%M %p') if inquiry.created_at else 'Recently' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <div class="display-5 mb-3">📋</div>
+            <h5 class="fw-bold">No inquiries yet</h5>
+            <p class="text-muted mb-0">Your estimate requests will appear here once you place an order.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
