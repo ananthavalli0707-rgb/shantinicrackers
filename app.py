@@ -252,7 +252,7 @@ def send_estimate_email(recipient, customer_name, estimate_text):
 def require_admin():
     if not session.get('logged_in') or not session.get('user_id'):
         flash("Please log in to open the admin dashboard.", "warning")
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
 
     db = get_db_connection()
     with db.cursor() as cursor:
@@ -282,6 +282,28 @@ def is_admin_user(user):
 
 def normalize_phone(phone):
     return ''.join(character for character in str(phone) if character.isdigit())
+
+
+def get_phone_variants(phone):
+    normalized_phone = normalize_phone(phone)
+    variants = [normalized_phone]
+    if len(normalized_phone) == 10:
+        variants.append('91' + normalized_phone)
+    elif normalized_phone.startswith('91') and len(normalized_phone) == 12:
+        variants.append(normalized_phone[2:])
+    return list(dict.fromkeys(variants))
+
+
+def password_matches(user, password):
+    stored_password = user.get('password_hash') if user else None
+    if not stored_password or not password:
+        return False
+    try:
+        if check_password_hash(stored_password, password):
+            return True
+    except (ValueError, TypeError):
+        pass
+    return stored_password == password
 
 
 def get_whatsapp_admin_phone():
@@ -626,6 +648,11 @@ def contact():
     return render_template('contact.html')
 
 
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+
 @app.route('/admin/dashboard')
 def admin_dashboard():
     access_denied = require_admin()
@@ -734,7 +761,8 @@ def login():
             elif '@' in identifier:
                 cursor.execute("SELECT * FROM users WHERE email = %s", [identifier.lower()])
             else:
-                cursor.execute("SELECT * FROM users WHERE phone = %s", [normalize_phone(identifier)])
+                phone_variants = get_phone_variants(identifier)
+                cursor.execute("SELECT * FROM users WHERE phone IN (%s, %s)", phone_variants)
             user = cursor.fetchone()
         db.close()
 
@@ -742,9 +770,7 @@ def login():
         if user:
             if name and phone and not identifier and not password:
                 valid_login = True
-            elif password and check_password_hash(user['password_hash'], password):
-                valid_login = True
-            elif password and user.get('password_hash') == password:
+            elif password_matches(user, password):
                 valid_login = True
 
         if valid_login:
@@ -761,6 +787,40 @@ def login():
         else:
             flash("Invalid credentials.", "danger")
     return render_template('login.html')
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+@app.route('/admin_login.html', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        identifier = (request.form.get('identifier') or '').strip()
+        password = request.form.get('password', '')
+
+        if not identifier or not password:
+            flash("Please enter your admin email or mobile number and password.", "danger")
+            return render_template('admin_login.html')
+
+        db = get_db_connection()
+        with db.cursor() as cursor:
+            if '@' in identifier:
+                cursor.execute("SELECT * FROM users WHERE email = %s", [identifier.lower()])
+            else:
+                phone_variants = get_phone_variants(identifier)
+                cursor.execute("SELECT * FROM users WHERE phone IN (%s, %s)", phone_variants)
+            user = cursor.fetchone()
+        db.close()
+
+        if user and password_matches(user, password) and is_admin_user(user):
+            session['logged_in'] = True
+            session['user_id'] = user['id']
+            session['user_name'] = user['name']
+            session['user_email'] = user['email']
+            session['user_phone'] = normalize_phone(user.get('phone') or '')
+            session['is_admin'] = True
+            session.setdefault('cart', {})
+            return redirect(url_for('admin_dashboard'))
+
+        flash("Invalid admin credentials.", "danger")
+    return render_template('admin_login.html')
 
 # --- SESSION-BASED ESTIMATE CART ---
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
@@ -943,7 +1003,8 @@ def submit_inquiry():
                 flash("Estimate receipt saved locally and sent to the customer email.", "success")
             else:
                 flash("Estimate receipt was saved locally, but email sending is disabled because SMTP credentials are not configured.", "warning")
-        except (OSError, smtplib.SMTPException):
+        except (OSError, smtplib.SMTPException) as error:
+            app.logger.exception("Customer receipt email failed: %s", error)
             flash("Order saved locally, but the customer receipt email could not be sent.", "warning")
 
     session.pop('cart', None)

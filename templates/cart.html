@@ -96,7 +96,7 @@
     <div class="col-md-4">
         <div class="card shadow border-0 p-4 bg-white cart-summary">
             <h5 class="fw-bold text-dark mb-3">Estimate Summary</h5>
-            <a href="#live-catalog" class="small fw-bold text-danger text-decoration-none mb-3">Add another product &rarr;</a>
+            <a href="{{ url_for('products') }}" class="small fw-bold text-danger text-decoration-none mb-3">Add another product &rarr;</a>
             <div class="d-flex justify-content-between mb-2">
                 <span>Items Selected:</span>
                 <span class="fw-bold">{{ cart_items|length }} types</span>
@@ -138,36 +138,4 @@
 </div>
 {% endif %}
 
-{% if session.get('logged_in') %}
-<section id="live-catalog" class="card border-0 shadow-sm mt-4 overflow-hidden">
-    <div class="card-header bg-white border-0 pt-4 px-4">
-        <p class="section-kicker mb-1">Fast access</p>
-        <h2 class="h4 fw-bold mb-1">Live Catalog &amp; Price Table</h2>
-        <p class="text-muted small mb-0">Add products directly to your estimate. Existing items can be updated or removed above.</p>
-    </div>
-    <div class="table-responsive px-4 pb-3">
-        <table class="table align-middle live-catalog-table mb-0">
-            <thead><tr class="text-muted text-uppercase"><th>Product</th><th>Category</th><th class="text-end">Our Price</th><th class="text-end">Action</th></tr></thead>
-            <tbody>
-                {% for product in catalog_products %}
-                <tr>
-                    <td class="fw-bold">{{ product.name }}</td>
-                    <td class="text-muted">{{ product.category_name or 'General' }}</td>
-                    <td class="text-end fw-bold text-success">₹{{ product.discount_price }}</td>
-                    <td class="text-end">
-                        <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="POST" class="d-inline-flex align-items-center justify-content-end gap-2">
-                            <input type="hidden" name="return_to" value="{{ url_for('view_cart') }}">
-                            <input type="number" name="quantity" value="1" min="1" class="form-control form-control-sm text-center" style="width: 4.5rem;" aria-label="Quantity for {{ product.name }}">
-                            <button type="submit" class="btn btn-sm btn-danger">Add</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="4" class="text-center text-muted py-4">No products are available.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
-{% endif %}
 {% endblock %}

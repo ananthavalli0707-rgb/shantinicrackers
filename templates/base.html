@@ -15,7 +15,7 @@
     <div class="topbar">
         <div class="container d-flex flex-wrap justify-content-center justify-content-md-between align-items-center gap-3 py-2">
             <div class="d-flex flex-wrap align-items-center gap-3">
-                <span><i class="fa-solid fa-envelope me-1 text-warning"></i> sasikumarmba@gmail.com</span>
+                <span><i class="fa-solid fa-envelope me-1 text-warning"></i> sasikumarmba7@gmail.com</span>
                 <span><i class="fa-solid fa-phone me-1 text-warning"></i> 9786361678</span>
             </div>
             <div class="d-flex flex-wrap align-items-center justify-content-center gap-2">
@@ -28,10 +28,6 @@
             </div>
         </div>
     </div>
-
-    <marquee class="marquee-banner" behavior="scroll" direction="left" scrollamount="4">
-        <span class="fw-semibold text-warning">Welcome to Shantini Crackers – DIWALI 2026 BOOKINGS OPEN NOW! | We are an authorized Sivakasi fireworks dealer. As directed by the 2018 Supreme Court Order, this website provides product details and price estimates only. Online sale of firecrackers is strictly prohibited.</span>
-    </marquee>
 
     <nav class="navbar navbar-expand-lg site-nav">
         <div class="container">
@@ -70,6 +66,7 @@
                         </ul>
                         {% endif %}
                     </div>
+                    <a class="nav-link" href="{{ url_for('about') }}">About Us</a>
                     {% if session.get('logged_in') %}
                         <span class="nav-link nav-user">Hi, {{ session['user_name'] }}</span>
                         {% if session.get('is_admin') %}
@@ -81,10 +78,6 @@
             </div>
         </div>
     </nav>
-
-    <marquee class="marquee-banner marquee-secondary" behavior="scroll" direction="left" scrollamount="4">
-        <span class="fw-semibold">✦ 100% ORIGINAL SIVAKASI FIREWORKS ✦ DIRECT FACTORY PRICE GUARANTEE ✦ PREMIUM QUALITY • SAFETY VERIFIED ✦</span>
-    </marquee>
 
     <a href="https://wa.me/917708971956?text=Hello%20Shantini%20Crackers%2C%20I%20need%20help%20with%20my%20fireworks%20order." target="_blank" rel="noopener" class="floating-whatsapp" aria-label="Chat with us on WhatsApp" title="Chat with us on WhatsApp">
         <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>

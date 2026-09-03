@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-4">
+        <div class="card shadow p-4 border-0">
+            <p class="section-kicker text-center mb-1">Restricted access</p>
+            <h3 class="fw-bold text-center text-danger mb-4">Admin Sign In</h3>
+            <form action="{{ url_for('admin_login') }}" method="POST">
+                <div class="mb-3">
+                    <label for="admin-identifier" class="form-label">Admin email or mobile number</label>
+                    <input id="admin-identifier" type="text" name="identifier" class="form-control" autocomplete="username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="admin-password" class="form-label">Password</label>
+                    <input id="admin-password" type="password" name="password" class="form-control" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn btn-danger w-100 fw-bold">Open Dashboard</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
