@@ -2,34 +2,19 @@
 {% block content %}
 
 <!-- Festive Banner Carousel -->
-<section id="homeBanner" class="carousel slide carousel-fade home-banner mb-5" data-bs-ride="carousel" data-bs-interval="4500">
+<section id="homeBanner" class="carousel slide carousel-fade home-banner mb-5" data-bs-ride="carousel" data-bs-interval="2000">
     <div class="carousel-indicators">
-        <button type="button" data-bs-target="#homeBanner" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Banner 1"></button>
-        <button type="button" data-bs-target="#homeBanner" data-bs-slide-to="1" aria-label="Banner 2"></button>
-        <button type="button" data-bs-target="#homeBanner" data-bs-slide-to="2" aria-label="Banner 3"></button>
+        {% for banner in ['bar - 1.jpeg', 'bar - 2.jpeg', 'bar - 3.jpeg'] %}
+        <button type="button" data-bs-target="#homeBanner" data-bs-slide-to="{{ loop.index0 }}" class="{{ 'active' if loop.first else '' }}" {% if loop.first %}aria-current="true"{% endif %} aria-label="Banner {{ loop.index }}"></button>
+        {% endfor %}
     </div>
     <div class="carousel-inner rounded-3 shadow">
-        {% for banner in ['bar - 1.jpg', 'bar - 2.jpg', 'bar - 3.jpg'] %}
+        {% for banner in ['bar - 1.jpeg', 'bar - 2.jpeg', 'bar - 3.jpeg'] %}
         <div class="carousel-item {{ 'active' if loop.first else '' }}">
             <img src="{{ url_for('static', filename='uploads/' ~ banner) }}" class="home-banner-image" alt="Shantini Crackers banner {{ loop.index }}">
-            <div class="home-banner-overlay"></div>
-            <div class="carousel-caption text-start">
-                <p class="section-kicker text-warning mb-2">Shantini Crackers</p>
-                <h1 class="fw-bold">Bright moments start here.</h1>
-                <p class="banner-copy">Choose your favourites and create a quick estimate.</p>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('products') }}" class="btn btn-warning text-dark">Explore Catalog</a>
-                </div>
-            </div>
         </div>
         {% endfor %}
     </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#homeBanner" data-bs-slide="prev" aria-label="Previous banner">
-        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-    </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#homeBanner" data-bs-slide="next" aria-label="Next banner">
-        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-    </button>
 </section>
 
 <section class="popular-picks mb-5" aria-labelledby="popularPicksTitle">

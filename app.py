@@ -67,6 +67,30 @@ def normalize_product_display_price(product):
     return product
 
 
+PACKAGING_RATE = 0.03
+
+
+def calculate_estimate_totals(items):
+    actual_total = 0
+    discounted_total = 0
+
+    for item in items:
+        quantity = int(item.get('quantity', 0) or 0)
+        actual_total += float(item.get('actual_price', 0) or 0) * quantity
+        discounted_total += float(item.get('discount_price', 0) or 0) * quantity
+
+    discount_total = actual_total - discounted_total
+    packaging_total = round(discounted_total * PACKAGING_RATE, 2)
+    amount = round(discounted_total + packaging_total, 2)
+    return {
+        'actual_total': round(actual_total, 2),
+        'discount_total': round(discount_total, 2),
+        'discounted_total': round(discounted_total, 2),
+        'packaging_total': packaging_total,
+        'amount': amount,
+    }
+
+
 def get_cart_summary():
     cart = session.get('cart', {})
     if not cart:
@@ -781,6 +805,8 @@ def login():
             session['user_phone'] = normalize_phone(user.get('phone') or '')
             session['is_admin'] = is_admin_user(user)
             session.setdefault('cart', {})
+            if session['is_admin']:
+                return redirect(url_for('admin_dashboard'))
             if session.get('cart'):
                 return redirect(url_for('view_cart'))
             return redirect(url_for('products'))
@@ -789,7 +815,7 @@ def login():
     return render_template('login.html')
 
 @app.route('/admin/login', methods=['GET', 'POST'])
-@app.route('/admin_login.html', methods=['GET', 'POST'])
+ 
 def admin_login():
     if request.method == 'POST':
         identifier = (request.form.get('identifier') or '').strip()
@@ -857,7 +883,7 @@ def view_cart():
         return render_template(
             'cart.html',
             cart_items=[],
-            total=0,
+            totals=calculate_estimate_totals([]),
             catalog_products=[],
             guest_cart_count=len(session.get('cart', {}))
         )
@@ -868,10 +894,9 @@ def view_cart():
 
     if 'cart' not in session or not session['cart']:
         db.close()
-        return render_template('cart.html', cart_items=[], total=0, catalog_products=catalog_products)
+        return render_template('cart.html', cart_items=[], totals=calculate_estimate_totals([]), catalog_products=catalog_products)
         
     cart_items = []
-    total = 0
     
     with db.cursor() as cursor:
         for p_id, qty in session['cart'].items():
@@ -885,13 +910,13 @@ def view_cart():
             if product:
                 product = normalize_product_display_price(product)
                 subtotal = product['discount_price'] * qty
-                total += subtotal
                 product['quantity'] = qty
                 product['subtotal'] = subtotal
                 cart_items.append(product)
     db.close()
-            
-    return render_template('cart.html', cart_items=cart_items, total=total, catalog_products=catalog_products)
+
+    totals = calculate_estimate_totals(cart_items)
+    return render_template('cart.html', cart_items=cart_items, totals=totals, catalog_products=catalog_products)
 
 
 @app.route('/cart/update/<int:product_id>', methods=['POST'])
@@ -936,8 +961,17 @@ def submit_inquiry():
     if 'cart' not in session or not session['cart']:
         return redirect(url_for('index'))
 
-    customer_name = (request.form.get('customer_name') or session.get('user_name') or 'Customer').strip()
+    shipping_name = (request.form.get('shipping_name') or request.form.get('customer_name') or session.get('user_name') or 'Customer').strip()
+    shipping_address_1 = (request.form.get('shipping_address_1') or '').strip()
+    shipping_address_2 = (request.form.get('shipping_address_2') or '').strip()
+    shipping_city = (request.form.get('shipping_city') or '').strip()
+    shipping_pincode = (request.form.get('shipping_pincode') or '').strip()
+    shipping_district = (request.form.get('shipping_district') or '').strip()
+    shipping_state = (request.form.get('shipping_state') or '').strip()
+    shipping_landmark = (request.form.get('shipping_landmark') or '').strip()
     customer_phone = normalize_phone(request.form.get('customer_phone') or session.get('user_phone') or '')
+    alternate_contact_number = normalize_phone(request.form.get('alternate_contact_number') or '')
+    whatsapp_number = normalize_phone(request.form.get('whatsapp_number') or '')
     customer_email = (request.form.get('customer_email') or session.get('user_email') or '').strip()
 
     if not customer_phone:
@@ -946,12 +980,25 @@ def submit_inquiry():
 
     MINIMUM_ESTIMATE_AMOUNT = 3000
     db = get_db_connection()
-    total = 0
     items_to_save = []
+    inquiry_products = []
 
     whatsapp_text = f"🚨 *Shantini Crackers Estimate Inquiry*\n"
-    whatsapp_text += f"👤 *Customer:* {customer_name}\n"
+    whatsapp_text += f"👤 *Shipping Name:* {shipping_name}\n"
+    whatsapp_text += f"📍 *Shipping Address:* {shipping_address_1}\n"
+    if shipping_address_2:
+        whatsapp_text += f"   {shipping_address_2}\n"
+    whatsapp_text += f"🏙️ *City:* {shipping_city}\n"
+    whatsapp_text += f"📮 *Pincode:* {shipping_pincode}\n"
+    whatsapp_text += f"🗺️ *District:* {shipping_district}\n"
+    whatsapp_text += f"🌐 *State:* {shipping_state}\n"
+    if shipping_landmark:
+        whatsapp_text += f"📌 *Landmark:* {shipping_landmark}\n"
     whatsapp_text += f"📞 *Phone:* {customer_phone}\n"
+    if alternate_contact_number:
+        whatsapp_text += f"📞 *Alternate Contact:* {alternate_contact_number}\n"
+    if whatsapp_number:
+        whatsapp_text += f"💬 *WhatsApp:* {whatsapp_number}\n"
     if customer_email:
         whatsapp_text += f"✉️ *Email:* {customer_email}\n"
     whatsapp_text += f"------------------------------------\n"
@@ -968,22 +1015,43 @@ def submit_inquiry():
             if p:
                 p = normalize_product_display_price(p)
                 subtotal = p['discount_price'] * qty
-                total += subtotal
+                p['quantity'] = qty
                 items_to_save.append((p_id, qty, p['discount_price']))
+                inquiry_products.append(p)
                 whatsapp_text += f"• {p['name']} x {qty} = ₹{subtotal:.2f}\n"
 
+        totals = calculate_estimate_totals(inquiry_products)
         whatsapp_text += f"------------------------------------\n"
-        whatsapp_text += f"💰 *Total Estimated Value:* ₹{total:.2f}"
+        whatsapp_text += f"*Total:* ₹{totals['actual_total']:.2f}\n"
+        whatsapp_text += f"*Discount (-):* ₹{totals['discount_total']:.2f}\n"
+        whatsapp_text += f"*Packaging (+):* ₹{totals['packaging_total']:.2f}\n"
+        whatsapp_text += f"💰 *Amount:* ₹{totals['amount']:.2f}"
 
-        if total < MINIMUM_ESTIMATE_AMOUNT:
+        if totals['amount'] < MINIMUM_ESTIMATE_AMOUNT:
             db.close()
             flash(f"Minimum estimate amount is ₹{MINIMUM_ESTIMATE_AMOUNT}. Please add more items to reach the minimum order value.", "warning")
             session['cart'] = session.get('cart', {})
             return redirect(url_for('view_cart'))
 
         # Save into database logs
-        cursor.execute("INSERT INTO inquiries (user_id, total_amount) VALUES (%s, %s)", (session['user_id'], total))
+        cursor.execute("INSERT INTO inquiries (user_id, total_amount) VALUES (%s, %s)", (session['user_id'], totals['amount']))
         inquiry_id = cursor.lastrowid
+
+        cursor.execute(
+            """
+            INSERT INTO shipping_details (
+                inquiry_id, shipping_name, shipping_address_1, shipping_address_2,
+                city, pincode, district, state, landmark, contact_number,
+                alternate_contact_number, whatsapp_number, customer_email
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                inquiry_id, shipping_name, shipping_address_1, shipping_address_2,
+                shipping_city, shipping_pincode, shipping_district, shipping_state,
+                shipping_landmark, customer_phone, alternate_contact_number,
+                whatsapp_number, customer_email,
+            )
+        )
 
         for p_id, qty, price in items_to_save:
             cursor.execute(
@@ -993,12 +1061,12 @@ def submit_inquiry():
 
     db.close()
 
-    pdf_data, pdf_path = generate_estimate_pdf(customer_name, whatsapp_text)
+    pdf_data, pdf_path = generate_estimate_pdf(shipping_name, whatsapp_text)
     if not customer_email or '@' not in customer_email:
         flash(f"Estimate receipt saved locally to {os.path.basename(pdf_path)}.", "success")
     else:
         try:
-            email_sent = send_estimate_email(customer_email, customer_name, whatsapp_text)
+            email_sent = send_estimate_email(customer_email, shipping_name, whatsapp_text)
             if email_sent:
                 flash("Estimate receipt saved locally and sent to the customer email.", "success")
             else:

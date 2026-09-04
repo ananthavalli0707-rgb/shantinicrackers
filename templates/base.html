@@ -12,27 +12,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
 </head>
 <body data-theme="light">
-    <div class="topbar">
-        <div class="container d-flex flex-wrap justify-content-center justify-content-md-between align-items-center gap-3 py-2">
-            <div class="d-flex flex-wrap align-items-center gap-3">
-                <span><i class="fa-solid fa-envelope me-1 text-warning"></i> sasikumarmba7@gmail.com</span>
-                <span><i class="fa-solid fa-phone me-1 text-warning"></i> 9786361678</span>
-            </div>
-            <div class="d-flex flex-wrap align-items-center justify-content-center gap-2">
-                <a class="topbar-link" href="/cart">Estimate Cart (₹{{ cart_summary.total }})</a>
-                <a class="topbar-link" href="{{ url_for('contact') }}">Contact Us</a>
-                {% if not session.get('logged_in') %}
-                    <a class="topbar-link" href="/signup">Sign Up</a>
-                    <a class="topbar-link" href="/login">Login</a>
-                {% endif %}
-            </div>
+    <div class="marquee-banner" role="status">
+        <div class="container">
+            <span>As per the Supreme Court order, online sale of firecrackers is not permitted. Don't worry, request a quote with us and get the details of our crackers. Please add and submit your enquiry. Minimum order: Rs 3000.</span>
         </div>
     </div>
 
     <nav class="navbar navbar-expand-lg site-nav">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/">🎆 Shantini Crackers</a>
-
             <div class="d-flex align-items-center gap-2 ms-auto ms-lg-0 order-lg-2">
                 <button id="themeToggle" class="theme-toggle-btn" type="button" aria-label="Toggle theme">
                     <span class="theme-icon" aria-hidden="true">🌙</span>
@@ -41,39 +28,26 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
             </div>
-
             <div class="collapse navbar-collapse order-lg-1" id="mainNavigation">
                 <div class="navbar-nav ms-auto align-items-lg-center">
                     <a class="nav-link" href="{{ url_for('index') }}">Home</a>
                     <a class="nav-link" href="{{ url_for('products') }}">Products</a>
+                    <a class="nav-link" href="{{ url_for('contact') }}">Contact Us</a>
                     <a class="nav-link" href="{{ url_for('price_list_pdf') }}" target="_blank" rel="noopener">
                         <i class="fa-solid fa-file-pdf me-1" aria-hidden="true"></i>Price List
                     </a>
-                    <div class="nav-item dropdown">
-                        <button class="nav-link dropdown-toggle category-nav-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Shop By Category
-                        </button>
-                        {% if nav_categories %}
-                        <ul class="dropdown-menu category-dropdown-menu" aria-label="Shop by category">
-                            {% for category in nav_categories %}
-                            <li>
-                                <a href="{{ url_for('products', category=category.id) }}" class="dropdown-item category-dropdown-item">
-                                    <img src="{{ url_for('static', filename=category.image_url or 'uploads/bar - 1.jpg') }}" width="54" height="40" alt="">
-                                    <span>{{ category.name }}</span>
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                    </div>
                     <a class="nav-link" href="{{ url_for('about') }}">About Us</a>
-                    {% if session.get('logged_in') %}
+                    {% if not session.get('logged_in') %}
+                        <a class="nav-link" href="{{ url_for('signup') }}">Sign Up</a>
+                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    {% else %}
                         <span class="nav-link nav-user">Hi, {{ session['user_name'] }}</span>
                         {% if session.get('is_admin') %}
                             <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
                         {% endif %}
-                        <a class="nav-link" href="/logout">Logout</a>
+                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
                     {% endif %}
+                    <a class="nav-link" href="{{ url_for('view_cart') }}">Estimate Cart (₹{{ cart_summary.total }})</a>
                 </div>
             </div>
         </div>

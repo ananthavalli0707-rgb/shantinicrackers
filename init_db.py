@@ -76,6 +76,26 @@ def initialize_and_seed():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
         """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS shipping_details (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            inquiry_id INT NOT NULL,
+            shipping_name VARCHAR(100) NOT NULL,
+            shipping_address_1 VARCHAR(255) NOT NULL,
+            shipping_address_2 VARCHAR(255),
+            city VARCHAR(100) NOT NULL,
+            pincode VARCHAR(10) NOT NULL,
+            district VARCHAR(100) NOT NULL,
+            state VARCHAR(100) NOT NULL,
+            landmark VARCHAR(255),
+            contact_number VARCHAR(20) NOT NULL,
+            alternate_contact_number VARCHAR(20),
+            whatsapp_number VARCHAR(20),
+            customer_email VARCHAR(100),
+            FOREIGN KEY (inquiry_id) REFERENCES inquiries(id) ON DELETE CASCADE
+        );
+        """)
         
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS inquiry_items (
@@ -90,6 +110,7 @@ def initialize_and_seed():
         """)
         
         # Clear old rows to prevent duplication errors
+        cursor.execute("TRUNCATE TABLE shipping_details;")
         cursor.execute("TRUNCATE TABLE inquiry_items;")
         cursor.execute("TRUNCATE TABLE inquiries;")
         cursor.execute("TRUNCATE TABLE products;")
@@ -280,7 +301,7 @@ def initialize_and_seed():
         # 5. Seed Test Admin user
         cursor.execute(
             "INSERT INTO users (name, email, password_hash, phone) VALUES (%s, %s, %s, %s)",
-            ('System Admin', 'admin@company.com', generate_password_hash('admin123'), '+919999999999')
+            ('System Admin', Config.ADMIN_EMAIL, generate_password_hash('ananthi'), Config.ADMIN_PHONE)
         )
         
         print("🎉 Database initialized and seeded over direct network port connection!")
