@@ -17,7 +17,7 @@
                         <label class="form-label fw-bold">Category</label>
                         <select name="category_id" class="form-select" required>
                             {% for cat in categories %}
-                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            <option value="{{ cat.id }}" data-discount-percent="{{ 0 if cat.name|lower == 'gift box' else cat.discount_percent }}" {{ 'selected' if cat.id == selected_category_id else '' }}>{{ cat.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -37,7 +37,7 @@
                     </div>
                     <div class="col-12 col-sm-6 mb-3">
                         <label class="form-label fw-bold">Our Discount Price</label>
-                        <input type="number" step="0.01" name="discount_price" class="form-control" placeholder="100" required>
+                        <input id="discount-price" type="number" step="0.01" name="discount_price" class="form-control" placeholder="Calculated automatically" readonly required>
                     </div>
                 </div>
                 <div class="mb-4">
@@ -50,4 +50,25 @@
         </div>
     </div>
 </div>
+<script>
+    const categoryInput = document.querySelector('select[name="category_id"]');
+    const actualPriceInput = document.querySelector('input[name="actual_price"]');
+    const discountPriceInput = document.getElementById('discount-price');
+
+    function updateDiscountPrice() {
+        const actualPrice = Number(actualPriceInput.value);
+        const selectedCategory = categoryInput.options[categoryInput.selectedIndex];
+        const discountPercent = Number(selectedCategory.dataset.discountPercent || 0);
+
+        if (!Number.isFinite(actualPrice) || actualPrice < 0) {
+            discountPriceInput.value = '';
+            return;
+        }
+
+        discountPriceInput.value = Math.round(actualPrice * (1 - discountPercent / 100));
+    }
+
+    categoryInput.addEventListener('change', updateDiscountPrice);
+    actualPriceInput.addEventListener('input', updateDiscountPrice);
+</script>
 {% endblock %}

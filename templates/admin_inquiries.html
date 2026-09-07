@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 admin-section-title">
+    <div>
+        <p class="section-kicker mb-1">Order workflow</p>
+        <h1 class="fw-bold mb-1">Customer Inquiries</h1>
+        <p class="text-muted mb-0">Track cracker requests from review through delivery.</p>
+    </div>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary fw-bold">Dashboard</a>
+</div>
+
+{% if inquiries %}
+<div class="card border-0 shadow-sm rounded-3 admin-panel">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small text-uppercase">
+                        <th class="ps-4">Inquiry</th>
+                        <th>Customer</th>
+                        <th>Products</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th class="pe-4">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inquiry in inquiries %}
+                    <tr>
+                        <td class="ps-4 fw-bold">#{{ inquiry.id }}</td>
+                        <td>
+                            <span class="fw-bold">{{ inquiry.shipping_name or inquiry.name or 'Unknown customer' }}</span>
+                            <span class="d-block text-muted small">{{ inquiry.contact_number or 'No phone' }}</span>
+                            <span class="d-block text-muted small">{{ inquiry.city or '' }}{% if inquiry.city and inquiry.state %}, {% endif %}{{ inquiry.state or '' }}</span>
+                        </td>
+                        <td class="small" style="min-width: 230px;">{{ inquiry['items'] or 'No product details' }}</td>
+                        <td class="fw-bold text-success text-nowrap">₹{{ inquiry.total_amount }}</td>
+                        <td style="min-width: 210px;">
+                            <form action="{{ url_for('admin_update_inquiry_status', inquiry_id=inquiry.id) }}" method="POST" class="d-flex gap-2">
+                                <label for="status-{{ inquiry.id }}" class="visually-hidden">Status for inquiry {{ inquiry.id }}</label>
+                                <select id="status-{{ inquiry.id }}" name="status" class="form-select form-select-sm">
+                                    {% for option in status_options %}
+                                    <option value="{{ option }}" {{ 'selected' if option == inquiry.status else '' }}>{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-dark">Save</button>
+                            </form>
+                        </td>
+                        <td class="pe-4 text-muted small text-nowrap">{{ inquiry.created_at.strftime('%d %b %Y, %I:%M %p') if inquiry.created_at else 'Recently' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center my-5 p-5 theme-surface rounded shadow-sm">
+    <div class="display-5 mb-3">📬</div>
+    <h4 class="fw-bold">No inquiries yet</h4>
+    <p class="text-muted mb-0">Customer estimate requests will appear here.</p>
+</div>
+{% endif %}
+{% endblock %}

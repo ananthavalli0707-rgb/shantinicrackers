@@ -19,6 +19,7 @@ from config import Config
 
 app = Flask(__name__, static_folder=os.path.join('templates', 'static'))
 app.config.from_object(Config)
+category_discount_column_ready = False
 
 
 @app.context_processor
@@ -43,8 +44,10 @@ def get_navigation_categories():
 def is_gift_box_category(category_name):
     return str(category_name or '').strip().lower() == 'gift box'
 
+DEFAULT_CATEGORY_DISCOUNT_PERCENT = 80
 
-def get_effective_discount_price(actual_price=None, category_name=None, stored_price=None):
+
+def get_effective_discount_price(actual_price=None, category_name=None, stored_price=None, category_discount_percent=None):
     base_value = actual_price if actual_price not in (None, '', 0) else (stored_price if stored_price not in (None, '', 0) else 0)
     try:
         base = float(base_value)
@@ -53,7 +56,9 @@ def get_effective_discount_price(actual_price=None, category_name=None, stored_p
 
     if is_gift_box_category(category_name):
         return int(round(float(stored_price if stored_price not in (None, '', 0) else base)))
-    return int(round(base * 0.2))
+    discount_percent = category_discount_percent if category_discount_percent not in (None, '') else DEFAULT_CATEGORY_DISCOUNT_PERCENT
+    discount_percent = min(max(float(discount_percent), 0), 100)
+    return int(round(base * (1 - discount_percent / 100)))
 
 
 def normalize_product_display_price(product):
@@ -63,7 +68,12 @@ def normalize_product_display_price(product):
     category_name = product.get('category_name') or product.get('category') or ''
     actual_price = product.get('actual_price', 0)
     stored_price = product.get('discount_price', 0)
-    product['discount_price'] = get_effective_discount_price(actual_price, category_name, stored_price)
+    product['discount_price'] = get_effective_discount_price(
+        actual_price,
+        category_name,
+        stored_price,
+        product.get('category_discount_percent'),
+    )
     return product
 
 
@@ -110,7 +120,8 @@ def get_cart_summary():
                     continue
                 total_count += qty
                 cursor.execute("""
-                    SELECT products.*, categories.name AS category_name
+                          SELECT products.*, categories.name AS category_name,
+                              categories.discount_percent AS category_discount_percent
                     FROM products
                     LEFT JOIN categories ON categories.id = products.category_id
                     WHERE products.id = %s
@@ -126,7 +137,8 @@ def get_cart_summary():
 
 # --- NATIVE PYMYSQL CONNECTION CONFIGURATION ---
 def get_db_connection():
-    return pymysql.connect(
+    global category_discount_column_ready
+    db = pymysql.connect(
         host=app.config.get('MYSQL_HOST', 'localhost'),
         user=app.config.get('MYSQL_USER', 'root'),
         password=app.config.get('MYSQL_PASSWORD', ''),
@@ -134,6 +146,20 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True # Automatically commits data insert/update statements
     )
+    if not category_discount_column_ready:
+        with db.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(*) AS column_exists
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'categories'
+                  AND column_name = 'discount_percent'
+            """)
+            if not cursor.fetchone()['column_exists']:
+                cursor.execute("ALTER TABLE categories ADD COLUMN discount_percent DECIMAL(5, 2) NOT NULL DEFAULT 80")
+            cursor.execute("UPDATE categories SET discount_percent = 0 WHERE LOWER(name) = 'gift box'")
+        category_discount_column_ready = True
+    return db
 
 
 def parse_estimate_items(estimate_text):
@@ -500,12 +526,12 @@ def ensure_gift_box_images(cursor):
 def get_catalog_products(cursor, category_id=None, include_only_in_stock=False):
     if category_id:
         cursor.execute(
-            "SELECT products.*, categories.name AS category_name, brands.name AS brand_name FROM products LEFT JOIN categories ON categories.id = products.category_id LEFT JOIN brands ON brands.id = products.brand_id WHERE products.category_id = %s" + (" AND products.is_stock = 1" if include_only_in_stock else ""),
+            "SELECT products.*, categories.name AS category_name, categories.discount_percent AS category_discount_percent, brands.name AS brand_name FROM products LEFT JOIN categories ON categories.id = products.category_id LEFT JOIN brands ON brands.id = products.brand_id WHERE products.category_id = %s" + (" AND products.is_stock = 1" if include_only_in_stock else ""),
             (category_id,)
         )
     else:
         cursor.execute(
-            "SELECT products.*, categories.name AS category_name, brands.name AS brand_name FROM products LEFT JOIN categories ON categories.id = products.category_id LEFT JOIN brands ON brands.id = products.brand_id" + (" WHERE products.is_stock = 1" if include_only_in_stock else "") + " ORDER BY products.id"
+            "SELECT products.*, categories.name AS category_name, categories.discount_percent AS category_discount_percent, brands.name AS brand_name FROM products LEFT JOIN categories ON categories.id = products.category_id LEFT JOIN brands ON brands.id = products.brand_id" + (" WHERE products.is_stock = 1" if include_only_in_stock else "") + " ORDER BY products.id"
         )
 
     catalog = cursor.fetchall()
@@ -519,7 +545,7 @@ def get_product_detail(product_id):
     try:
         with db.cursor() as cursor:
             cursor.execute(
-                "SELECT products.*, categories.name AS category_name, brands.name AS brand_name FROM products LEFT JOIN categories ON categories.id = products.category_id LEFT JOIN brands ON brands.id = products.brand_id WHERE products.id = %s",
+                "SELECT products.*, categories.name AS category_name, categories.discount_percent AS category_discount_percent, brands.name AS brand_name FROM products LEFT JOIN categories ON categories.id = products.category_id LEFT JOIN brands ON brands.id = products.brand_id WHERE products.id = %s",
                 [product_id],
             )
             product = cursor.fetchone()
@@ -704,15 +730,6 @@ def admin_dashboard():
         cursor.execute("SELECT COUNT(*) AS total FROM inquiries")
         inquiry_count = cursor.fetchone()['total']
         products = get_catalog_products(cursor)
-        cursor.execute("""
-            SELECT inquiries.id, inquiries.total_amount, inquiries.status,
-                   inquiries.created_at, users.name, users.email
-            FROM inquiries
-            LEFT JOIN users ON users.id = inquiries.user_id
-            ORDER BY inquiries.created_at DESC
-            LIMIT 8
-        """)
-        recent_inquiries = cursor.fetchall()
     db.close()
 
     stats = {
@@ -721,7 +738,157 @@ def admin_dashboard():
         'customer_count': customer_count,
         'inquiry_count': inquiry_count,
     }
-    return render_template('admin_dashboard.html', stats=stats, recent_inquiries=recent_inquiries, products=products)
+    return render_template('admin_dashboard.html', stats=stats, products=products)
+
+@app.route('/admin/inquiries')
+def admin_inquiries():
+    access_denied = require_admin()
+    if access_denied:
+        return access_denied
+
+    db = get_db_connection()
+    with db.cursor() as cursor:
+        cursor.execute("""
+            SELECT inquiries.id, inquiries.total_amount, inquiries.status,
+                   inquiries.created_at, users.name, users.email,
+                   shipping_details.shipping_name, shipping_details.contact_number,
+                   shipping_details.city, shipping_details.state,
+                   GROUP_CONCAT(
+                       CONCAT(products.name, ' x', inquiry_items.quantity)
+                       ORDER BY products.name SEPARATOR ', '
+                   ) AS items
+            FROM inquiries
+            LEFT JOIN users ON users.id = inquiries.user_id
+            LEFT JOIN shipping_details ON shipping_details.inquiry_id = inquiries.id
+            LEFT JOIN inquiry_items ON inquiry_items.inquiry_id = inquiries.id
+            LEFT JOIN products ON products.id = inquiry_items.product_id
+            GROUP BY inquiries.id, inquiries.total_amount, inquiries.status,
+                     inquiries.created_at, users.name, users.email,
+                     shipping_details.shipping_name, shipping_details.contact_number,
+                     shipping_details.city, shipping_details.state
+            ORDER BY inquiries.created_at DESC
+        """)
+        inquiries = cursor.fetchall()
+    db.close()
+
+    return render_template(
+        'admin_inquiries.html',
+        inquiries=inquiries,
+        status_options=['Pending Review', 'Waiting for Delivery', 'Shipped', 'Delivered', 'Cancelled'],
+    )
+
+@app.route('/admin/inquiries/<int:inquiry_id>/status', methods=['POST'])
+def admin_update_inquiry_status(inquiry_id):
+    access_denied = require_admin()
+    if access_denied:
+        return access_denied
+
+    status_options = {'Pending Review', 'Waiting for Delivery', 'Shipped', 'Delivered', 'Cancelled'}
+    status = request.form.get('status', '').strip()
+    if status not in status_options:
+        flash('Please choose a valid inquiry status.', 'danger')
+        return redirect(url_for('admin_inquiries'))
+
+    db = get_db_connection()
+    with db.cursor() as cursor:
+        cursor.execute("UPDATE inquiries SET status = %s WHERE id = %s", [status, inquiry_id])
+        updated = cursor.rowcount
+    db.close()
+
+    flash('Inquiry status updated.' if updated else 'Inquiry not found.', 'success' if updated else 'warning')
+    return redirect(url_for('admin_inquiries'))
+
+@app.route('/admin/category-products')
+def admin_category_products():
+    access_denied = require_admin()
+    if access_denied:
+        return access_denied
+
+    db = get_db_connection()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT * FROM categories ORDER BY name")
+        categories = cursor.fetchall()
+        products = get_catalog_products(cursor)
+    db.close()
+
+    products_by_category = {category['id']: [] for category in categories}
+    uncategorized_products = []
+    for product in products:
+        category_id = product.get('category_id')
+        if category_id in products_by_category:
+            products_by_category[category_id].append(product)
+        else:
+            uncategorized_products.append(product)
+
+    return render_template(
+        'admin_category_products.html',
+        categories=categories,
+        products_by_category=products_by_category,
+        uncategorized_products=uncategorized_products,
+    )
+
+@app.route('/admin/add-category', methods=['POST'])
+def admin_add_category():
+    access_denied = require_admin()
+    if access_denied:
+        return access_denied
+
+    category_name = request.form.get('name', '').strip()
+    if not category_name:
+        flash('Please enter a category name.', 'danger')
+        return redirect(url_for('admin_category_products'))
+
+    db = get_db_connection()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT id FROM categories WHERE name = %s", [category_name])
+        existing_category = cursor.fetchone()
+        if existing_category:
+            db.close()
+            flash('That category already exists.', 'warning')
+            return redirect(url_for('admin_category_products'))
+        default_discount = 0 if is_gift_box_category(category_name) else DEFAULT_CATEGORY_DISCOUNT_PERCENT
+        cursor.execute("INSERT INTO categories (name, discount_percent) VALUES (%s, %s)", [category_name, default_discount])
+    db.close()
+
+    flash(f'Category "{category_name}" added successfully.', 'success')
+    return redirect(url_for('admin_category_products'))
+
+@app.route('/admin/update-category-discount/<int:category_id>', methods=['POST'])
+def admin_update_category_discount(category_id):
+    access_denied = require_admin()
+    if access_denied:
+        return access_denied
+
+    try:
+        discount_percent = float(request.form.get('discount_percent', ''))
+    except (TypeError, ValueError):
+        flash('Enter a discount percentage between 0 and 100.', 'danger')
+        return redirect(url_for('admin_category_products'))
+
+    db = get_db_connection()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT name FROM categories WHERE id = %s", [category_id])
+        category = cursor.fetchone()
+        if not category:
+            db.close()
+            flash('Category not found.', 'danger')
+            return redirect(url_for('admin_category_products'))
+
+        if is_gift_box_category(category['name']):
+            discount_percent = 0
+        elif not 0 <= discount_percent <= 100:
+            db.close()
+            flash('Enter a discount percentage between 0 and 100.', 'danger')
+            return redirect(url_for('admin_category_products'))
+
+        cursor.execute(
+            "UPDATE categories SET discount_percent = %s WHERE id = %s",
+            [discount_percent, category_id],
+        )
+    db.close()
+
+    flash(f'Discount for {category["name"]} updated successfully.', 'success')
+    return redirect(url_for('admin_category_products'))
 
 # --- USER IDENTITY LOGIC ---
 @app.route('/signup', methods=['GET', 'POST'])
@@ -909,7 +1076,8 @@ def view_cart():
     with db.cursor() as cursor:
         for p_id, qty in session['cart'].items():
             cursor.execute("""
-                SELECT products.*, categories.name AS category_name
+                  SELECT products.*, categories.name AS category_name,
+                      categories.discount_percent AS category_discount_percent
                 FROM products
                 LEFT JOIN categories ON categories.id = products.category_id
                 WHERE products.id = %s
@@ -1014,7 +1182,9 @@ def submit_inquiry():
     with db.cursor() as cursor:
         for p_id, qty in session['cart'].items():
             cursor.execute("""
-                SELECT products.name, products.actual_price, products.discount_price, categories.name AS category_name
+                  SELECT products.name, products.actual_price, products.discount_price,
+                      categories.name AS category_name,
+                      categories.discount_percent AS category_discount_percent
                 FROM products
                 LEFT JOIN categories ON categories.id = products.category_id
                 WHERE products.id = %s
@@ -1120,12 +1290,12 @@ def admin_add_product():
 
         category_name = ''
         with db.cursor() as cursor:
-            cursor.execute("SELECT name FROM categories WHERE id = %s", [category_id])
+            cursor.execute("SELECT name, discount_percent FROM categories WHERE id = %s", [category_id])
             category_row = cursor.fetchone()
             if category_row:
                 category_name = category_row.get('name', '')
 
-        discount_price = get_effective_discount_price(actual_price, category_name)
+        discount_price = get_effective_discount_price(actual_price, category_name, category_row.get('discount_percent') if category_row else None)
         
         # Handle the image file upload
         if 'image' not in request.files:
@@ -1164,7 +1334,13 @@ def admin_add_product():
         brands = cursor.fetchall()
     db.close()
     
-    return render_template('admin_add_product.html', categories=categories, brands=brands)
+    selected_category_id = request.args.get('category_id', type=int)
+    return render_template(
+        'admin_add_product.html',
+        categories=categories,
+        brands=brands,
+        selected_category_id=selected_category_id,
+    )
 
 
 @app.route('/admin/edit-product/<int:product_id>', methods=['GET', 'POST'])
@@ -1187,12 +1363,12 @@ def admin_edit_product(product_id):
             selected_actual_price = request.form['actual_price']
 
             category_name = ''
-            cursor.execute("SELECT name FROM categories WHERE id = %s", [selected_category_id])
+            cursor.execute("SELECT name, discount_percent FROM categories WHERE id = %s", [selected_category_id])
             category_row = cursor.fetchone()
             if category_row:
                 category_name = category_row.get('name', '')
 
-            effective_discount = get_effective_discount_price(selected_actual_price, category_name)
+            effective_discount = get_effective_discount_price(selected_actual_price, category_name, category_row.get('discount_percent') if category_row else None)
 
             if image and image.filename:
                 if not allowed_file(image.filename):

@@ -12,11 +12,13 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
 </head>
 <body data-theme="light">
+    {% if not request.path.startswith('/admin') %}
     <div class="marquee-banner" role="status">
         <div class="container">
             <span>As per the Supreme Court order, online sale of firecrackers is not permitted. Don't worry, request a quote with us and get the details of our crackers. Please add and submit your enquiry. Minimum order: Rs 3000.</span>
         </div>
     </div>
+    {% endif %}
 
     <nav class="navbar navbar-dark navbar-expand-lg site-nav">
         <div class="container">

@@ -51,9 +51,20 @@ def initialize_and_seed():
         CREATE TABLE IF NOT EXISTS categories (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(100) NOT NULL UNIQUE,
-            image_url VARCHAR(255)
+            image_url VARCHAR(255),
+            discount_percent DECIMAL(5, 2) NOT NULL DEFAULT 80
         );
         """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS column_exists
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'categories'
+              AND column_name = 'discount_percent'
+        """)
+        if not cursor.fetchone()['column_exists']:
+            cursor.execute("ALTER TABLE categories ADD COLUMN discount_percent DECIMAL(5, 2) NOT NULL DEFAULT 80")
         
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS brands (
@@ -156,6 +167,7 @@ def initialize_and_seed():
             ('Gift Box', 'uploads/unicorn_15items.jpeg')
         ]
         cursor.executemany("INSERT INTO categories (name, image_url) VALUES (%s, %s)", categories)
+        cursor.execute("UPDATE categories SET discount_percent = 0 WHERE name = 'Gift Box'")
 
         # Fetch maps
         cursor.execute("SELECT id, name FROM categories")

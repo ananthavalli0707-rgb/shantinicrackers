@@ -6,7 +6,10 @@
         <h1 class="fw-bold mb-1">Admin Dashboard</h1>
         <p class="text-muted mb-0">Monitor your catalog and customer estimates.</p>
     </div>
-    <a href="{{ url_for('admin_add_product') }}" class="btn btn-danger fw-bold">+ Add Product</a>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('admin_category_products') }}" class="btn btn-outline-danger fw-bold">Category-wise Products</a>
+        <a href="{{ url_for('admin_add_product') }}" class="btn btn-danger fw-bold">+ Add Product</a>
+    </div>
 </div>
 
 <div class="row g-3 g-xl-4 mb-4">
@@ -51,49 +54,13 @@
     </div>
 </div>
 
-<div class="card border-0 shadow-sm rounded-3 admin-panel">
-    <div class="card-header theme-surface border-0 pt-4 px-4">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-                <h4 class="fw-bold mb-1">Recent inquiries</h4>
-                <p class="text-muted small mb-0">Latest estimate requests from customers.</p>
-            </div>
-            <span class="badge text-bg-light">{{ stats.inquiry_count }} total</span>
+<div class="card border-0 shadow-sm rounded-3 admin-panel mb-4">
+    <div class="card-body px-4 py-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h4 class="fw-bold mb-1">Customer inquiries</h4>
+            <p class="text-muted small mb-0">Review cracker requests and update delivery status.</p>
         </div>
-    </div>
-    <div class="card-body px-4">
-        {% if recent_inquiries %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
-                    <tr class="text-muted small text-uppercase">
-                        <th>Customer</th>
-                        <th>Email</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th class="text-end">Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for inquiry in recent_inquiries %}
-                    <tr>
-                        <td class="fw-bold">{{ inquiry.name or 'Unknown customer' }}</td>
-                        <td class="text-muted">{{ inquiry.email or 'No email' }}</td>
-                        <td class="fw-bold text-success">₹{{ inquiry.total_amount }}</td>
-                        <td><span class="badge text-bg-warning">{{ inquiry.status }}</span></td>
-                        <td class="text-end text-muted small">{{ inquiry.created_at.strftime('%d %b %Y, %I:%M %p') if inquiry.created_at else 'Recently' }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <div class="display-5 mb-3">📬</div>
-            <h5 class="fw-bold">No inquiries yet</h5>
-            <p class="text-muted mb-0">Customer estimate requests will appear here.</p>
-        </div>
-        {% endif %}
+        <a href="{{ url_for('admin_inquiries') }}" class="btn btn-outline-danger fw-bold">Open inquiries ({{ stats.inquiry_count }})</a>
     </div>
 </div>
 <div class="card border-0 shadow-sm rounded-3 mt-4 admin-panel">
