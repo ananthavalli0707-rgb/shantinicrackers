@@ -9,7 +9,7 @@
     <div class="d-flex flex-wrap gap-2">
         <form action="{{ url_for('admin_add_category') }}" method="POST" class="d-flex gap-2">
             <label for="new-category-name" class="visually-hidden">New category name</label>
-            <input id="new-category-name" name="name" type="text" class="form-control" placeholder="New category name" maxlength="100" required>
+            <input id="new-category-name" name="name" type="text" class="form-control" maxlength="100" required>
             <button type="submit" class="btn btn-outline-danger fw-bold text-nowrap">+ Category</button>
         </form>
         <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary fw-bold">Dashboard</a>

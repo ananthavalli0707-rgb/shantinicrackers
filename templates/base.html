@@ -38,13 +38,13 @@
                     <a class="nav-link" href="{{ url_for('products') }}">Products</a>
                     {% endif %}
                     {% if not session.get('logged_in') %}
-                        <a class="nav-link" href="{{ url_for('account') }}">Login</a>
+                        <a class="nav-link" href="{{ url_for('admin_login' if request.path.startswith('/admin') else 'account') }}">{{ 'Admin Login' if request.path.startswith('/admin') else 'Login' }}</a>
                     {% else %}
                         <span class="nav-link nav-user">Hi, {{ session['user_name'] }}</span>
                         {% if session.get('is_admin') %}
                             <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
                         {% endif %}
-                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                        <a class="nav-link" href="{{ url_for('admin_logout' if session.get('is_admin') else 'logout') }}">Logout</a>
                     {% endif %}
                 </div>
             </div>

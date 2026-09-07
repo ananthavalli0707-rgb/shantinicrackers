@@ -1,7 +1,9 @@
 import os
 import re
 import smtplib
-from datetime import datetime
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from email.message import EmailMessage
 from io import BytesIO
@@ -20,6 +22,7 @@ from config import Config
 app = Flask(__name__, static_folder=os.path.join('templates', 'static'))
 app.config.from_object(Config)
 category_discount_column_ready = False
+password_reset_table_ready = False
 
 
 @app.context_processor
@@ -162,6 +165,22 @@ def get_db_connection():
     return db
 
 
+def ensure_password_reset_table(db):
+    with db.cursor() as cursor:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_type VARCHAR(10) NOT NULL,
+                account_id INT NOT NULL,
+                token_hash CHAR(64) NOT NULL UNIQUE,
+                expires_at DATETIME NOT NULL,
+                used_at DATETIME NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_password_reset_account (account_type, account_id)
+            )
+        """)
+
+
 def parse_estimate_items(estimate_text):
     items = []
     total = 0.0
@@ -301,6 +320,94 @@ def send_estimate_email(recipient, customer_name, estimate_text):
         smtp.send_message(message)
 
     return pdf_path
+
+
+def send_password_reset_email(recipient, reset_url):
+    if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+        return False
+
+    message = EmailMessage()
+    message['Subject'] = 'Reset your Shantini Crackers password'
+    message['From'] = app.config['MAIL_FROM']
+    message['To'] = recipient
+    message.set_content(
+        'We received a request to reset your Shantini Crackers password.\n\n'
+        f'Open this link within 30 minutes to choose a new password:\n{reset_url}\n\n'
+        'If you did not request this, you can ignore this email.'
+    )
+
+    with smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT']) as smtp:
+        if app.config['MAIL_USE_TLS']:
+            smtp.starttls()
+        smtp.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        smtp.send_message(message)
+    return True
+
+
+def create_password_reset(account_type, account):
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+    expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30)
+    db = get_db_connection()
+    try:
+        ensure_password_reset_table(db)
+        with db.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM password_reset_tokens WHERE account_type = %s AND account_id = %s AND used_at IS NULL",
+                [account_type, account['id']],
+            )
+            cursor.execute(
+                "INSERT INTO password_reset_tokens (account_type, account_id, token_hash, expires_at) VALUES (%s, %s, %s, %s)",
+                [account_type, account['id'], token_hash, expires_at],
+            )
+    finally:
+        db.close()
+    return token
+
+
+def get_reset_account(token):
+    token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+    db = get_db_connection()
+    try:
+        ensure_password_reset_table(db)
+        with db.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, account_type, account_id
+                FROM password_reset_tokens
+                WHERE token_hash = %s AND used_at IS NULL AND expires_at > %s
+                """,
+                [token_hash, datetime.now(timezone.utc).replace(tzinfo=None)],
+            )
+            reset = cursor.fetchone()
+            if not reset:
+                return None
+
+            table = 'users' if reset['account_type'] == 'user' else 'admins'
+            cursor.execute(f"SELECT * FROM {table} WHERE id = %s", [reset['account_id']])
+            account = cursor.fetchone()
+            return reset, account
+    finally:
+        db.close()
+
+
+def complete_password_reset(reset, password):
+    password_hash = generate_password_hash(password)
+    db = get_db_connection()
+    try:
+        ensure_password_reset_table(db)
+        with db.cursor() as cursor:
+            table = 'users' if reset['account_type'] == 'user' else 'admins'
+            cursor.execute(
+                f"UPDATE {table} SET password_hash = %s WHERE id = %s",
+                [password_hash, reset['account_id']],
+            )
+            cursor.execute(
+                "UPDATE password_reset_tokens SET used_at = %s WHERE id = %s AND used_at IS NULL",
+                [datetime.now(timezone.utc).replace(tzinfo=None), reset['id']],
+            )
+    finally:
+        db.close()
 
 
 def require_admin():
@@ -1023,6 +1130,64 @@ def admin_login():
         flash("Invalid admin credentials.", "danger")
     return render_template('admin_login.html')
 
+
+@app.route('/forgot-password/<account_type>', methods=['GET', 'POST'])
+def forgot_password(account_type):
+    if account_type not in ('user', 'admin'):
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        table = 'users' if account_type == 'user' else 'admins'
+        db = get_db_connection()
+        try:
+            with db.cursor() as cursor:
+                cursor.execute(f"SELECT * FROM {table} WHERE email = %s", [email])
+                account = cursor.fetchone()
+        finally:
+            db.close()
+
+        if account and account.get('email'):
+            try:
+                token = create_password_reset(account_type, account)
+                reset_path = url_for('reset_password', token=token)
+                reset_url = f"{app.config['APP_BASE_URL']}{reset_path}" if app.config.get('APP_BASE_URL') else url_for('reset_password', token=token, _external=True)
+                send_password_reset_email(account['email'], reset_url)
+            except (OSError, smtplib.SMTPException, pymysql.Error):
+                app.logger.exception('Unable to send password reset email')
+
+        flash('If an account with that email exists, a password reset link has been sent.', 'info')
+        return redirect(url_for('forgot_password', account_type=account_type))
+
+    return render_template('forgot_password.html', account_type=account_type)
+
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    reset_data = get_reset_account(token)
+    if not reset_data:
+        flash('This password reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('login'))
+
+    reset, account = reset_data
+    if not account:
+        flash('This password reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirmation = request.form.get('confirm_password', '')
+        if len(password) < 8:
+            flash('Your new password must be at least 8 characters.', 'danger')
+        elif password != confirmation:
+            flash('The passwords do not match.', 'danger')
+        else:
+            complete_password_reset(reset, password)
+            flash('Your password has been changed. Please sign in.', 'success')
+            return redirect(url_for('admin_login' if reset['account_type'] == 'admin' else 'login'))
+
+    return render_template('reset_password.html', account_type=reset['account_type'], token=token)
+
 # --- SESSION-BASED ESTIMATE CART ---
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
@@ -1266,6 +1431,11 @@ def logout():
     session.clear()
     return render_template('logout.html')
 
+@app.route('/admin/logout')
+def admin_logout():
+    session.clear()
+    return render_template('admin_logout.html')
+
 UPLOAD_FOLDER = os.path.join('templates', 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 
@@ -1412,4 +1582,4 @@ def admin_delete_product(product_id):
     return redirect(url_for('admin_dashboard'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

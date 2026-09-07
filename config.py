@@ -18,3 +18,4 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', '')
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
     MAIL_FROM = os.environ.get('MAIL_FROM', '') or MAIL_USERNAME
+    APP_BASE_URL = os.environ.get('APP_BASE_URL', '').rstrip('/')

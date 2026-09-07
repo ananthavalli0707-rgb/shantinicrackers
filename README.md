@@ -62,6 +62,7 @@ MAIL_USERNAME=your-email@example.com
 MAIL_PASSWORD=your-gmail-app-password
 MAIL_USE_TLS=true
 MAIL_FROM=your-email@example.com
+APP_BASE_URL=http://127.0.0.1:5000
 ```
 
 Do not commit `.env`. It contains database, mail, and session secrets.
@@ -105,6 +106,11 @@ http://127.0.0.1:5000/admin/login
 ```
 
 The development server is intended for local testing only.
+
+Set `APP_BASE_URL` to the address users use to open the site. For example, for
+another device on the same network, use `http://YOUR_HOST_IP:5000` instead of
+`127.0.0.1`. Password reset emails use this setting so their links open on the
+correct device.
 
 ## Use From Another Device on the Same Network
 

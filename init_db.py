@@ -46,6 +46,19 @@ def initialize_and_seed():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            account_type VARCHAR(10) NOT NULL,
+            account_id INT NOT NULL,
+            token_hash CHAR(64) NOT NULL UNIQUE,
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_password_reset_account (account_type, account_id)
+        );
+        """)
         
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS categories (

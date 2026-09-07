@@ -156,7 +156,7 @@
                     </div>
                     <div class="col-sm-6">
                         <label for="customer_phone" class="form-label small text-muted">Contact Number</label>
-                        <input id="customer_phone" type="tel" name="customer_phone" class="form-control" value="{{ session.get('user_phone', '') }}" placeholder="9786361678" inputmode="numeric" required>
+                        <input id="customer_phone" type="tel" name="customer_phone" class="form-control" value="{{ session.get('user_phone', '') }}" inputmode="numeric" required>
                     </div>
                     <div class="col-sm-6">
                         <label for="alternate_contact_number" class="form-label small text-muted">Alternate Contact Number</label>
@@ -168,7 +168,7 @@
                     </div>
                     <div class="col-sm-6">
                         <label for="customer_email" class="form-label small text-muted">Customer Email (optional)</label>
-                        <input id="customer_email" type="email" name="customer_email" class="form-control" value="{{ session.get('user_email', '') }}" placeholder="name@example.com">
+                        <input id="customer_email" type="email" name="customer_email" class="form-control" value="{{ session.get('user_email', '') }}">
                     </div>
                 </div>
                 <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">

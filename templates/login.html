@@ -16,6 +16,7 @@
                 </div>
                 <button type="submit" class="btn btn-danger w-100 fw-bold">Sign In</button>
             </form>
+            <p class="text-center small mt-3 mb-0"><a href="{{ url_for('forgot_password', account_type='user') }}" class="text-danger">Forgot password?</a></p>
             <p class="text-center text-muted small mt-3 mb-0">New customer? <a href="{{ url_for('signup') }}" class="fw-bold text-danger">Create an account</a></p>
         </div>
     </div>
