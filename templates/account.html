@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center my-4 my-lg-5">
+    <div class="col-lg-8 col-xl-7">
+        <div class="card border-0 shadow p-4 p-md-5 theme-surface">
+            <div class="text-center mb-4">
+                <p class="section-kicker mb-1">Your Shantini account</p>
+                <h1 class="h3 fw-bold text-danger mb-0">Login or create an account</h1>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-center gap-2 mb-4" role="tablist" aria-label="Account options">
+                <button type="button" class="btn {% if active_panel == 'login' %}btn-danger{% else %}btn-outline-danger{% endif %} account-tab" data-panel="login" role="tab" aria-selected="{{ 'true' if active_panel == 'login' else 'false' }}">Login</button>
+                <button type="button" class="btn {% if active_panel == 'signup' %}btn-danger{% else %}btn-outline-danger{% endif %} account-tab" data-panel="signup" role="tab" aria-selected="{{ 'true' if active_panel == 'signup' else 'false' }}">Sign Up</button>
+            </div>
+
+            <section id="login-panel" class="account-panel" {% if active_panel != 'login' %}hidden{% endif %}>
+                <form action="{{ url_for('login') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label" for="login-identifier">Email or mobile number</label>
+                        <input id="login-identifier" type="text" name="identifier" class="form-control" autocomplete="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="login-password">Password</label>
+                        <input id="login-password" type="password" name="password" class="form-control" autocomplete="current-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 fw-bold">Sign In</button>
+                </form>
+            </section>
+
+            <section id="signup-panel" class="account-panel" {% if active_panel != 'signup' %}hidden{% endif %}>
+                <form action="{{ url_for('signup') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label" for="signup-name">Full Name</label>
+                        <input id="signup-name" type="text" name="name" class="form-control" autocomplete="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="signup-email">Email <span class="text-muted small">(Optional)</span></label>
+                        <input id="signup-email" type="email" name="email" class="form-control" autocomplete="email">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="signup-phone">Mobile Number</label>
+                        <input id="signup-phone" type="tel" name="phone" class="form-control" inputmode="numeric" autocomplete="tel" pattern="[0-9]{7,15}" placeholder="9786361678" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="signup-password">Password</label>
+                        <input id="signup-password" type="password" name="password" class="form-control" autocomplete="new-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 fw-bold">Register Account</button>
+                </form>
+            </section>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.account-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            var panelName = tab.dataset.panel;
+            document.querySelectorAll('.account-panel').forEach(function(panel) {
+                panel.hidden = panel.id !== panelName + '-panel';
+            });
+            document.querySelectorAll('.account-tab').forEach(function(button) {
+                var selected = button.dataset.panel === panelName;
+                button.classList.toggle('btn-danger', selected);
+                button.classList.toggle('btn-outline-danger', !selected);
+                button.setAttribute('aria-selected', selected ? 'true' : 'false');
+            });
+        });
+    });
+</script>
+{% endblock %}

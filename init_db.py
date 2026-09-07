@@ -35,6 +35,17 @@ def initialize_and_seed():
         """)
 
         cursor.execute("ALTER TABLE users MODIFY email VARCHAR(100) NULL;")
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS admins (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            email VARCHAR(100) UNIQUE,
+            password_hash VARCHAR(255) NOT NULL,
+            phone VARCHAR(20) UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
         
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS categories (
@@ -116,6 +127,7 @@ def initialize_and_seed():
         cursor.execute("TRUNCATE TABLE products;")
         cursor.execute("TRUNCATE TABLE brands;")
         cursor.execute("TRUNCATE TABLE categories;")
+        cursor.execute("TRUNCATE TABLE admins;")
         cursor.execute("TRUNCATE TABLE users;")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
         print("Tables configured successfully.")
@@ -298,10 +310,10 @@ def initialize_and_seed():
             products_data
         )
 
-        # 5. Seed Test Admin user
+        # 5. Seed the administrator separately from customer accounts
         cursor.execute(
-            "INSERT INTO users (name, email, password_hash, phone) VALUES (%s, %s, %s, %s)",
-            ('System Admin', Config.ADMIN_EMAIL, generate_password_hash('ananthi'), Config.ADMIN_PHONE)
+            "INSERT INTO admins (name, email, password_hash, phone) VALUES (%s, %s, %s, %s)",
+            ('Ananthavalli', Config.ADMIN_EMAIL or None, generate_password_hash('ananthi'), Config.ADMIN_PHONE or None)
         )
         
         print("🎉 Database initialized and seeded over direct network port connection!")

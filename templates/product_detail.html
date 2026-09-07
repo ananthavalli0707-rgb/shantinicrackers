@@ -10,13 +10,13 @@
 
     <div class="product-detail-card">
         <div class="row g-0 align-items-stretch">
-            <div class="col-lg-6">
+            <div class="col-12 col-lg-6">
                 <div class="product-detail-gallery">
-                    <img src="{{ url_for('static', filename='uploads/offer logo.jpg') }}" class="offer-badge detail-offer-badge" alt="Offer label">
+                    <img src="{{ url_for('static', filename='uploads/offer logo.png') }}" class="offer-badge detail-offer-badge" alt="Offer label">
                     <img src="{{ url_for('static', filename=product.image_url) }}" class="product-detail-image" alt="{{ product.name }}">
                 </div>
             </div>
-            <div class="col-lg-6">
+            <div class="col-12 col-lg-6">
                 <div class="product-detail-body">
                     <p class="section-kicker mb-2">Product Details</p>
                     <h2 class="fw-bold mb-3">{{ product.name }}</h2>
@@ -26,7 +26,7 @@
                         <span class="badge bg-warning text-dark">{{ product.category_name }}</span>
                         {% endif %}
                         {% if product.brand_name %}
-                        <span class="badge bg-light text-dark border">{{ product.brand_name }}</span>
+                        <span class="badge theme-surface theme-text border">{{ product.brand_name }}</span>
                         {% endif %}
                     </div>
 
@@ -41,9 +41,14 @@
 
                     <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="POST" class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center mb-3">
                         <input type="hidden" name="return_to" value="{{ url_for('products') }}#product-{{ product.id }}">
-                        <div class="input-group" style="max-width: 170px;">
-                            <span class="input-group-text">Qty</span>
-                            <input type="number" name="quantity" value="1" min="1" class="form-control" aria-label="Quantity for {{ product.name }}">
+                        <div class="input-group product-quantity-control" style="max-width: 170px;">
+                            <button type="button" class="btn btn-outline-secondary quantity-decrease" aria-label="Decrease quantity for {{ product.name }}" title="Decrease quantity">
+                                <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                            </button>
+                            <input type="number" name="quantity" value="1" min="1" class="form-control text-center" aria-label="Quantity for {{ product.name }}">
+                            <button type="button" class="btn btn-outline-secondary quantity-increase" aria-label="Increase quantity for {{ product.name }}" title="Increase quantity">
+                                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            </button>
                         </div>
                         <button type="submit" class="btn btn-danger fw-bold px-4">Add to Estimate</button>
                     </form>

@@ -14,23 +14,22 @@
 </div>
 
 {% if not session.get('logged_in') %}
-<div class="text-center my-5 p-5 bg-white rounded shadow-sm">
+<div class="text-center my-5 p-5 theme-surface rounded shadow-sm">
     <div style="font-size: 4rem;">🛒</div>
     {% if guest_cart_count %}
-    <h4 class="fw-bold text-dark my-3">{{ guest_cart_count }} item{{ 's' if guest_cart_count != 1 else '' }} added to your estimate</h4>
+    <h4 class="fw-bold theme-text my-3">{{ guest_cart_count }} item{{ 's' if guest_cart_count != 1 else '' }} added to your estimate</h4>
     <p class="text-muted">Please sign up or log in to view prices and continue.</p>
     {% else %}
     <h4 class="fw-bold text-muted my-3">Your estimation sheet is empty</h4>
     {% endif %}
     <div class="d-flex justify-content-center gap-2">
-        <a href="{{ url_for('login') }}" class="btn btn-danger fw-bold">Login</a>
-        <a href="{{ url_for('signup') }}" class="btn btn-outline-danger fw-bold">Sign Up</a>
+        <a href="{{ url_for('account') }}" class="btn btn-danger fw-bold">Login / Sign Up</a>
     </div>
 </div>
 {% elif cart_items %}
-<div class="row">
-    <div class="col-md-8">
-        <div class="card shadow-sm border-0 p-3 bg-white cart-table-wrap">
+<div class="row g-4">
+    <div class="col-12 col-md-8">
+        <div class="card shadow-sm border-0 p-3 theme-surface cart-table-wrap">
             <div class="table-responsive d-none d-sm-block">
             <table class="table align-middle">
                 <thead>
@@ -46,7 +45,7 @@
                     {% for item in cart_items %}
                     <tr>
                         <td>
-                            <span class="fw-bold text-dark">{{ item.name }}</span>
+                            <span class="fw-bold theme-text">{{ item.name }}</span>
                         </td>
                         <td class="text-center text-success fw-bold">₹{{ item.discount_price }}</td>
                         <td class="text-center">
@@ -55,7 +54,7 @@
                                 <button type="submit" class="btn btn-sm btn-outline-dark">Update</button>
                             </form>
                         </td>
-                        <td class="text-end fw-bold text-dark">₹{{ item.subtotal }}</td>
+                        <td class="text-end fw-bold theme-text">₹{{ item.subtotal }}</td>
                         <td class="text-end">
                             <form action="{{ url_for('remove_cart_item', product_id=item.id) }}" method="POST" onsubmit="return confirm('Remove this item from your estimate sheet?');">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
@@ -70,7 +69,7 @@
                 {% for item in cart_items %}
                 <article class="cart-mobile-item">
                     <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-                        <div class="fw-bold text-dark text-break">{{ item.name }}</div>
+                        <div class="fw-bold theme-text text-break">{{ item.name }}</div>
                         <form action="{{ url_for('remove_cart_item', product_id=item.id) }}" method="POST" onsubmit="return confirm('Remove this item from your estimate sheet?');">
                             <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
                         </form>
@@ -85,7 +84,7 @@
                             <input id="mobile-quantity-{{ item.id }}" type="number" name="quantity" class="form-control form-control-sm text-center" value="{{ item.quantity }}" min="0" aria-label="Quantity for {{ item.name }}">
                             <button type="submit" class="btn btn-sm btn-outline-dark">Update</button>
                         </form>
-                        <span class="fw-bold text-dark">₹{{ item.subtotal }}</span>
+                        <span class="fw-bold theme-text">₹{{ item.subtotal }}</span>
                     </div>
                 </article>
                 {% endfor %}
@@ -93,9 +92,9 @@
         </div>
     </div>
     
-    <div class="col-md-4">
-        <div class="card shadow border-0 p-4 bg-white cart-summary">
-            <h5 class="fw-bold text-dark mb-3">Estimate Summary</h5>
+    <div class="col-12 col-md-4">
+        <div class="card shadow border-0 p-4 theme-surface cart-summary">
+            <h5 class="fw-bold theme-text mb-3">Estimate Summary</h5>
             <a href="{{ url_for('products') }}" class="small fw-bold text-danger text-decoration-none mb-3">Add another product &rarr;</a>
             <div class="d-flex justify-content-between mb-2">
                 <span>Items Selected:</span>
@@ -116,7 +115,7 @@
                     <span class="fw-bold">₹{{ '%.2f'|format(totals.packaging_total) }}</span>
                 </div>
                 <div class="d-flex justify-content-between gap-3 border-top pt-3">
-                    <span class="fs-5 fw-bold text-dark">Amount</span>
+                    <span class="fs-5 fw-bold theme-text">Amount</span>
                     <span class="fs-4 fw-bold text-success">₹{{ '%.2f'|format(totals.amount) }}</span>
                 </div>
             </div>
@@ -183,7 +182,7 @@
     </div>
 </div>
 {% else %}
-<div class="text-center my-5 p-5 bg-white rounded shadow-sm">
+<div class="text-center my-5 p-5 theme-surface rounded shadow-sm">
     <div style="font-size: 4rem;">🛒</div>
     <h4 class="fw-bold text-muted my-3">Your estimation sheet is empty</h4>
     <a href="/products" class="btn btn-danger fw-bold">Browse Fireworks Catalog</a>

@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="row justify-content-center my-5">
-    <div class="col-md-4">
-        <div class="card shadow p-4 border-0">
+    <div class="col-12 col-sm-8 col-md-4">
+        <div class="card shadow p-3 p-sm-4 border-0">
             <p class="section-kicker text-center mb-1">Welcome back</p>
             <h3 class="fw-bold text-center text-danger mb-4">Sign In</h3>
             <form action="/login" method="POST">
@@ -16,6 +16,7 @@
                 </div>
                 <button type="submit" class="btn btn-danger w-100 fw-bold">Sign In</button>
             </form>
+            <p class="text-center text-muted small mt-3 mb-0">New customer? <a href="{{ url_for('signup') }}" class="fw-bold text-danger">Create an account</a></p>
         </div>
     </div>
 </div>

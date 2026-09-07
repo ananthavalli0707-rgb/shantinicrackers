@@ -8,13 +8,13 @@
     </a>
 </div>
 <div class="section-rule mx-auto"></div>
-<div class="row">
+<div class="row g-3 g-md-4">
     {% for product in products %}
-    <div class="col-6 col-md-3 mb-4" id="product-{{ product.id }}">
+    <div class="col-12 col-sm-6 col-md-3 mb-4" id="product-{{ product.id }}">
         <div class="card catalog-card h-100 shadow-sm border-0">
             <a href="{{ url_for('product_detail', product_id=product.id) }}" class="product-card-link" aria-label="View details for {{ product.name }}">
-                <div class="catalog-image p-2 p-sm-3 text-center bg-white">
-                    <img src="{{ url_for('static', filename='uploads/offer logo.jpg') }}" class="offer-badge" alt="Offer label">
+                <div class="catalog-image p-2 p-sm-3 text-center theme-surface">
+                    <img src="{{ url_for('static', filename='uploads/offer logo.png') }}" class="offer-badge" alt="Offer label">
                     {% if product.image_url %}
                     <img src="{{ url_for('static', filename=product.image_url) }}" class="img-fluid rounded product-image" alt="{{ product.name }}">
                     {% else %}
@@ -26,7 +26,7 @@
             <div class="card-body d-flex flex-column justify-content-between">
                 <div>
                     <a href="{{ url_for('product_detail', product_id=product.id) }}" class="product-name-link">
-                        <h6 class="card-title fw-bold text-dark mb-2">{{ product.name }}</h6>
+                        <h6 class="card-title fw-bold theme-text mb-2">{{ product.name }}</h6>
                     </a>
                     <p class="card-text text-muted mb-1">
                         {% if product.actual_price != product.discount_price %}
@@ -37,9 +37,14 @@
                 </div>
                 <form action="/add_to_cart/{{ product.id }}" method="POST" class="mt-3">
                     <input type="hidden" name="return_to" value="{{ request.path }}?{{ request.query_string.decode() }}#product-{{ product.id }}">
-                    <div class="input-group mb-2">
-                        <span class="input-group-text bg-white">Qty</span>
-                        <input type="number" name="quantity" class="form-control" value="1" min="1">
+                    <div class="input-group mb-2 product-quantity-control">
+                        <button type="button" class="btn btn-outline-secondary quantity-decrease" aria-label="Decrease quantity for {{ product.name }}" title="Decrease quantity">
+                            <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                        </button>
+                        <input type="number" name="quantity" class="form-control text-center" value="1" min="1" aria-label="Quantity for {{ product.name }}">
+                        <button type="button" class="btn btn-outline-secondary quantity-increase" aria-label="Increase quantity for {{ product.name }}" title="Increase quantity">
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <button type="submit" class="btn btn-danger w-100 fw-bold">Add to Estimate</button>
                 </form>
@@ -52,8 +57,9 @@
 </div>
 <a href="{{ url_for('view_cart') }}" class="floating-cart" aria-label="Open estimate cart" title="Open estimate cart">
     <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-    {% if session.get('cart', {})|length %}
-    <span class="floating-cart-count">{{ session.get('cart', {})|length }}</span>
+    {% set cart_item_count = session.get('cart', {}).values()|sum %}
+    {% if cart_item_count %}
+    <span class="floating-cart-count">{{ cart_item_count }}</span>
     {% endif %}
 </a>
 {% endblock %}

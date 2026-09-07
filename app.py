@@ -255,7 +255,11 @@ def send_estimate_email(recipient, customer_name, estimate_text):
     message['From'] = app.config['MAIL_FROM']
     message['To'] = recipient
     message.set_content(
-        f"Hello {customer_name},\n\nYour fireworks estimate is attached as a PDF.\n\nThank you,\nShantini Crackers"
+        f"Hello {customer_name},\n\n"
+        "Here are your shipping details and fireworks estimate:\n\n"
+        f"{estimate_text}\n\n"
+        "The same estimate is attached as a PDF.\n\n"
+        "Thank you,\nShantini Crackers"
     )
     message.add_attachment(
         pdf_data,
@@ -274,17 +278,17 @@ def send_estimate_email(recipient, customer_name, estimate_text):
 
 
 def require_admin():
-    if not session.get('logged_in') or not session.get('user_id'):
+    if not session.get('logged_in') or not session.get('admin_id'):
         flash("Please log in to open the admin dashboard.", "warning")
         return redirect(url_for('admin_login'))
 
     db = get_db_connection()
     with db.cursor() as cursor:
-        cursor.execute("SELECT email, phone FROM users WHERE id = %s", [session['user_id']])
-        user = cursor.fetchone()
+        cursor.execute("SELECT id FROM admins WHERE id = %s", [session['admin_id']])
+        admin = cursor.fetchone()
     db.close()
 
-    if not is_admin_user(user):
+    if not admin:
         flash("You do not have permission to access this page.", "danger")
         return redirect(url_for('index'))
     return None
@@ -676,6 +680,12 @@ def contact():
 def about():
     return render_template('about.html')
 
+@app.route('/account')
+def account():
+    active_panel = request.args.get('mode', 'login')
+    if active_panel not in ('login', 'signup'):
+        active_panel = 'login'
+    return render_template('account.html', active_panel=active_panel)
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
@@ -724,7 +734,7 @@ def signup():
 
         if not name or not phone or not password:
             flash("Please enter your name, phone number, and password.", "danger")
-            return render_template('signup.html')
+            return render_template('account.html', active_panel='signup')
 
         password_hash = generate_password_hash(password)
 
@@ -747,7 +757,7 @@ def signup():
                 cursor.execute(duplicate_query, duplicate_values)
                 if cursor.fetchone():
                     flash("This email or mobile number is already registered.", "danger")
-                    return render_template('signup.html')
+                    return render_template('account.html', active_panel='signup')
 
                 cursor.execute(
                     "INSERT INTO users (name, email, phone, password_hash) VALUES (%s, %s, %s, %s)",
@@ -761,12 +771,12 @@ def signup():
             flash("We could not create your account right now. Please try again.", "danger")
         finally:
             db.close()
-    return render_template('signup.html')
+    return render_template('account.html', active_panel='signup')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        for session_key in ('logged_in', 'user_id', 'user_name', 'user_email', 'user_phone', 'is_admin'):
+        for session_key in ('logged_in', 'user_id', 'admin_id', 'user_name', 'user_email', 'user_phone', 'is_admin'):
             session.pop(session_key, None)
 
         identifier = (request.form.get('identifier') or request.form.get('email') or '').strip()
@@ -776,7 +786,7 @@ def login():
 
         if not (identifier or (name and phone)):
             flash("Please enter your email or mobile number and password.", "danger")
-            return render_template('login.html')
+            return render_template('account.html', active_panel='login')
 
         db = get_db_connection()
         with db.cursor() as cursor:
@@ -803,21 +813,20 @@ def login():
             session['user_name'] = user['name']
             session['user_email'] = user['email']
             session['user_phone'] = normalize_phone(user.get('phone') or '')
-            session['is_admin'] = is_admin_user(user)
+            session['is_admin'] = False
             session.setdefault('cart', {})
-            if session['is_admin']:
-                return redirect(url_for('admin_dashboard'))
             if session.get('cart'):
                 return redirect(url_for('view_cart'))
             return redirect(url_for('products'))
         else:
             flash("Invalid credentials.", "danger")
-    return render_template('login.html')
+    return render_template('account.html', active_panel='login')
 
 @app.route('/admin/login', methods=['GET', 'POST'])
  
 def admin_login():
     if request.method == 'POST':
+        session.clear()
         identifier = (request.form.get('identifier') or '').strip()
         password = request.form.get('password', '')
 
@@ -828,21 +837,20 @@ def admin_login():
         db = get_db_connection()
         with db.cursor() as cursor:
             if '@' in identifier:
-                cursor.execute("SELECT * FROM users WHERE email = %s", [identifier.lower()])
+                cursor.execute("SELECT * FROM admins WHERE email = %s", [identifier.lower()])
             else:
                 phone_variants = get_phone_variants(identifier)
-                cursor.execute("SELECT * FROM users WHERE phone IN (%s, %s)", phone_variants)
-            user = cursor.fetchone()
+                cursor.execute("SELECT * FROM admins WHERE phone IN (%s, %s)", phone_variants)
+            admin = cursor.fetchone()
         db.close()
 
-        if user and password_matches(user, password) and is_admin_user(user):
+        if admin and password_matches(admin, password):
             session['logged_in'] = True
-            session['user_id'] = user['id']
-            session['user_name'] = user['name']
-            session['user_email'] = user['email']
-            session['user_phone'] = normalize_phone(user.get('phone') or '')
+            session['admin_id'] = admin['id']
+            session['user_name'] = admin['name']
+            session['user_email'] = admin.get('email')
+            session['user_phone'] = normalize_phone(admin.get('phone') or '')
             session['is_admin'] = True
-            session.setdefault('cart', {})
             return redirect(url_for('admin_dashboard'))
 
         flash("Invalid admin credentials.", "danger")
